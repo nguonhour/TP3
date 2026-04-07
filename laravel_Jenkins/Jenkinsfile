@@ -45,10 +45,67 @@ pipeline {
         
         success {
             sh 'echo "Pipeline succeeded! ✅"'
+            // Email notification on success
+            emailext(
+                subject: "✅ BUILD SUCCESS: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
+                body: """
+                    Pipeline Build Successful!
+                    
+                    Build Details:
+                    - Job: ${JOB_NAME}
+                    - Build #: ${BUILD_NUMBER}
+                    - Status: SUCCESS ✅
+                    - Duration: ${BUILD_DURATION}
+                    - Commit: ${GIT_COMMIT}
+                    
+                    View Build: ${BUILD_URL}
+                """,
+                to: '${DEFAULT_RECIPIENTS}',
+                recipientProviders: [developers(), requestor()]
+            )
+            // Telegram notification on success
+            sh '''
+                TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
+                TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
+                MESSAGE="✅ Build #${BUILD_NUMBER} SUCCESS\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
+                curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                  -d "chat_id=${TELEGRAM_CHAT_ID}" \
+                  -d "text=${MESSAGE}" || true
+            '''
         }
         
         failure {
             sh 'echo "Pipeline failed! ❌"'
+            // Email notification on failure
+            emailext(
+                subject: "❌ BUILD FAILURE: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
+                body: """
+                    Pipeline Build Failed!
+                    
+                    Build Details:
+                    - Job: ${JOB_NAME}
+                    - Build #: ${BUILD_NUMBER}
+                    - Status: FAILURE ❌
+                    - Duration: ${BUILD_DURATION}
+                    - Commit: ${GIT_COMMIT}
+                    
+                    Console Output:
+                    ${BUILD_LOG_EXCERPT}
+                    
+                    View Build: ${BUILD_URL}
+                """,
+                to: '${DEFAULT_RECIPIENTS}',
+                recipientProviders: [developers(), requestor()]
+            )
+            // Telegram notification on failure
+            sh '''
+                TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
+                TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
+                MESSAGE="❌ Build #${BUILD_NUMBER} FAILED\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
+                curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                  -d "chat_id=${TELEGRAM_CHAT_ID}" \
+                  -d "text=${MESSAGE}" || true
+            '''
         }
     }
 }

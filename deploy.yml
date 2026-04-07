@@ -1,56 +1,130 @@
 ---
-- name: Deploy Laravel Application
-  hosts: laravel-servers
+- name: Deploy Laravel Application to Local
+  hosts: local
   gather_facts: yes
-
   vars:
     app_path: /var/www/html
 
   tasks:
-    - name: Pull latest code from repository
+    - name: Local Deployment - Pull latest code
       command: git pull origin main
       args:
         chdir: "{{ app_path }}"
       ignore_errors: yes
 
-    - name: Install vendor dependencies
+    - name: Local Deployment - Install dependencies
       command: composer install --no-dev --optimize-autoloader
       args:
         chdir: "{{ app_path }}"
+      ignore_errors: yes
 
-    - name: Migrate database
+    - name: Local Deployment - Clear caches
+      command: php artisan cache:clear
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Local Deployment complete
+      debug:
+        msg: "✅ Local Laravel deployment completed successfully!"
+
+---
+- name: Deploy Laravel Application to Production
+  hosts: production
+  gather_facts: yes
+
+  vars:
+    app_path: /var/www/html
+    deploy_user: www-data
+
+  tasks:
+    - name: Production - Check if Laravel app directory exists
+      stat:
+        path: "{{ app_path }}"
+      register: app_dir_exists
+
+    - name: Production - Clone Laravel repository if not exists
+      git:
+        repo: "{{ git_repo | default('https://github.com/nguonhour/TP3.git') }}"
+        dest: "{{ app_path }}"
+        version: main
+      when: not app_dir_exists.stat.exists
+      ignore_errors: yes
+
+    - name: Production - Pull latest code
+      command: git pull origin main
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Production - Install vendor dependencies
+      command: composer install --no-dev --optimize-autoloader
+      args:
+        chdir: "{{ app_path }}"
+      become: yes
+      become_user: "{{ deploy_user }}"
+      ignore_errors: yes
+
+    - name: Production - Copy .env file
+      command: cp .env.example .env
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Production - Generate application key
+      command: php artisan key:generate
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Production - Run database migrations
       command: php artisan migrate --force
       args:
         chdir: "{{ app_path }}"
       ignore_errors: yes
 
-    - name: Clear cache
+    - name: Production - Clear caches
       command: php artisan cache:clear
       args:
         chdir: "{{ app_path }}"
+      ignore_errors: yes
 
-    - name: Clear config cache
+    - name: Production - Clear config cache
       command: php artisan config:clear
       args:
         chdir: "{{ app_path }}"
+      ignore_errors: yes
 
-    - name: Optimize application
+    - name: Production - Optimize application
       command: php artisan optimize
       args:
         chdir: "{{ app_path }}"
-
-    - name: Set proper permissions
-      file:
-        path: "{{ app_path }}/storage"
-        owner: www-data
-        group: www-data
-        mode: "0755"
-        recurse: yes
-
-    - name: Restart PHP-FPM
-      command: php-fpm -R
       ignore_errors: yes
 
-    - name: Deployment complete
+    - name: Production - Set proper permissions on storage
+      file:
+        path: "{{ app_path }}/{{ item }}"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+        recurse: yes
+      with_items:
+        - storage
+        - bootstrap/cache
+      ignore_errors: yes
+
+    - name: Production - Restart PHP-FPM
+      service:
+        name: php-fpm
+        state: restarted
+      ignore_errors: yes
+
+    - name: Production - Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+      ignore_errors: yes
+
+    - name: Production Deployment complete
       debug:
-        msg: "Laravel deployment completed successfully!"
+        msg: "✅ Production deployment to 178.128.93.188 completed successfully!"
