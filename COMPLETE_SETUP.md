@@ -155,36 +155,28 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-### Step 3: Configure Ansiblefor Production Deployment
-
-Update inventory file: `inventory/hosts.ini`
-
-```ini
-# Add this to your inventory:
-
-[production]
-production-server ansible_host=178.128.93.188 \
-  ansible_user=root \
-  ansible_private_key_file=./production_key
+### Step 3: if you forget install php in step 2
 ```
+sudo nano /etc/nginx/sites-available/laravel
+```
+```
+# heng_nguonhour TP3 Laravel application
+location /heng_nguonhour {
+    alias /var/www/html/heng_nguonhour/public;
+    try_files $uri $uri/ @heng_nguonhour;
 
-### Step 4: Update Jenkinsfile Deploy Stage
-
-The Jenkinsfile is already configured to deploy to the production server via Ansible.
-
-When running:
-
-```groovy
-stage('Deploy') {
-    steps {
-        sh '''
-        export ANSIBLE_HOST_KEY_CHECKING=False
-        ansible-playbook -i inventory/hosts.ini deploy.yml
-        '''
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $request_filename;
     }
 }
-```
 
+location @heng_nguonhour {
+    rewrite /heng_nguonhour/(.*)$ /heng_nguonhour/index.php?/$1 last;
+}
+```
 ---
 
 ## 🔄 **Complete Workflow**
