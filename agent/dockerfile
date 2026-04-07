@@ -1,0 +1,81 @@
+# Setup laravel environment with SSH agent support for Jenkins
+FROM php:8.2-fpm
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    openssh-server \
+    openssh-client \
+    sudo \
+    vim \
+    ansible \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install zip \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Create SSH directories and configure SSH
+RUN mkdir -p /run/sshd /root/.ssh \
+    && chmod 700 /root/.ssh \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Create Jenkins user with sudo privileges (alternative to root login)
+RUN useradd -m -s /bin/bash jenkins \
+    && echo "jenkins:jenkins" | chpasswd \
+    && usermod -aG sudo jenkins \
+    && mkdir -p /home/jenkins/.ssh \
+    && chmod 700 /home/jenkins/.ssh \
+    && echo 'Host *' > /home/jenkins/.ssh/config \
+    && echo '    ForwardAgent yes' >> /home/jenkins/.ssh/config \
+    && echo '    StrictHostKeyChecking no' >> /home/jenkins/.ssh/config \
+    && echo '    UserKnownHostsFile=/dev/null' >> /home/jenkins/.ssh/config \
+    && chmod 600 /home/jenkins/.ssh/config \
+    && chown jenkins:jenkins /home/jenkins/.ssh/config
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy existing application directory contents
+COPY . /var/www/html
+
+# Set permissions for Laravel
+RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chown -R jenkins:jenkins /home/jenkins
+
+# Create startup script to generate SSH keys and run services
+RUN echo '#!/bin/bash\n\
+    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then\n\
+    ssh-keygen -A\n\
+    fi\n\
+    /etc/init.d/ssh start\n\
+    php-fpm\n\
+    ' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Expose ports (9000 for PHP-FPM, 22 for SSH)
+EXPOSE 9000 22
+
+# Start services
+CMD ["/entrypoint.sh"]
+

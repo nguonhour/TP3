@@ -1,0 +1,58 @@
+pipeline {
+    agent {
+        dockerfile {
+            filename 'agent/dockerfile'
+            dir 'agent'
+            label 'docker-agent'
+        }
+    }
+    triggers {
+        pollSCM('* * * * *') // Run every 1 minute
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'cp .env.example .env'
+
+                sh 'echo "Configuring database connection..."'
+                // sh 'sed -i "s/DB_HOST=.*/DB_HOST=localhost/" .env'
+                // sh 'sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env'
+                // sh 'sed -i "s/DB_DATABASE=.*/DB_DATABASE=laravel/" .env'
+                // sh 'sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env'
+                // sh 'sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=password/" .env'
+
+                sh 'echo "Installing dependencies..."'
+                sh 'composer install --no-dev --optimize-autoloader'
+                // sh 'npm install && npm run production' // Uncomment if Node.js is added to Dockerfile
+
+                sh 'echo "Generating application key..."'
+                sh 'php artisan key:generate'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'echo "Running tests..."'
+                sh './vendor/bin/phpunit'
+                sh 'php artisan test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'echo "Deploying Laravel application..."'
+                sh 'ansible-playbook -i inventory/hosts.ini deploy.yml'
+                sh 'echo "Deployment completed!"'
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            sh 'echo "Pipeline succeeded! ✅"'
+        }
+        failure {
+            sh 'echo "Pipeline failed! ❌"'
+        }
+    }
+}

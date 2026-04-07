@@ -1,0 +1,56 @@
+---
+- name: Deploy Laravel Application
+  hosts: laravel-servers
+  gather_facts: yes
+
+  vars:
+    app_path: /var/www/html
+
+  tasks:
+    - name: Pull latest code from repository
+      command: git pull origin main
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Install vendor dependencies
+      command: composer install --no-dev --optimize-autoloader
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Migrate database
+      command: php artisan migrate --force
+      args:
+        chdir: "{{ app_path }}"
+      ignore_errors: yes
+
+    - name: Clear cache
+      command: php artisan cache:clear
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Clear config cache
+      command: php artisan config:clear
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Optimize application
+      command: php artisan optimize
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Set proper permissions
+      file:
+        path: "{{ app_path }}/storage"
+        owner: www-data
+        group: www-data
+        mode: "0755"
+        recurse: yes
+
+    - name: Restart PHP-FPM
+      command: php-fpm -R
+      ignore_errors: yes
+
+    - name: Deployment complete
+      debug:
+        msg: "Laravel deployment completed successfully!"
