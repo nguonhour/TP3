@@ -38,47 +38,40 @@ pipeline {
     }
     
     post {
-        always {
-            sh 'echo "Cleaning up workspace..."'
-            cleanWs()
-        }
-        
         success {
-            sh 'echo "Pipeline succeeded! ✅"'
-            // Email notification on success
             mail(
                 subject: "✅ BUILD SUCCESS: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
                 body: "Pipeline Build Successful!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: SUCCESS ✅\n\nView Build: ${BUILD_URL}",
                 to: 'hengnguonhour@gmail.com'
             )
-            // Telegram notification on success
-            sh '''
-                TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
-                TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
-                MESSAGE="✅ Build #${BUILD_NUMBER} SUCCESS\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
-                curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                  -d "chat_id=${TELEGRAM_CHAT_ID}" \
-                  -d "text=${MESSAGE}" || true
-            '''
+            script {
+                sh '''
+                    TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
+                    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
+                    MESSAGE="✅ Build #${BUILD_NUMBER} SUCCESS\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
+                    curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d "chat_id=${TELEGRAM_CHAT_ID}" \
+                      -d "text=${MESSAGE}" || true
+                '''
+            }
         }
         
         failure {
-            sh 'echo "Pipeline failed! ❌"'
-            // Email notification on failure
             mail(
                 subject: "❌ BUILD FAILURE: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
                 body: "Pipeline Build Failed!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: FAILURE ❌\n\nView Build: ${BUILD_URL}",
                 to: 'hengnguonhour@gmail.com'
             )
-            // Telegram notification on failure
-            sh '''
-                TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
-                TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
-                MESSAGE="❌ Build #${BUILD_NUMBER} FAILED\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
-                curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                  -d "chat_id=${TELEGRAM_CHAT_ID}" \
-                  -d "text=${MESSAGE}" || true
-            '''
+            script {
+                sh '''
+                    TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-YOUR_TELEGRAM_BOT_TOKEN}"
+                    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-YOUR_CHAT_ID}"
+                    MESSAGE="❌ Build #${BUILD_NUMBER} FAILED\\nJob: ${JOB_NAME}\\nView: ${BUILD_URL}"
+                    curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d "chat_id=${TELEGRAM_CHAT_ID}" \
+                      -d "text=${MESSAGE}" || true
+                '''
+            }
         }
     }
 }
