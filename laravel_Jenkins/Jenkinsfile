@@ -1,11 +1,5 @@
 pipeline {
-    agent {
-        dockerfile {
-            filename 'agent/dockerfile'
-            dir 'agent'
-            label 'docker-agent'
-        }
-    }
+    agent any
     triggers {
         pollSCM('* * * * *') // Run every 1 minute
     }
