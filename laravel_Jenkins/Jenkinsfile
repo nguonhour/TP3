@@ -46,19 +46,10 @@ pipeline {
         success {
             sh 'echo "Pipeline succeeded! ✅"'
             // Email notification on success
-            emailext(
+            mail(
                 subject: "✅ BUILD SUCCESS: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
-                body: """
-                    Pipeline Build Successful!
-                    
-                    Build Details:
-                    - Job: ${JOB_NAME}
-                    - Build #: ${BUILD_NUMBER}
-                    - Status: SUCCESS ✅
-                    - Build URL: ${BUILD_URL}
-                """,
-                to: '${DEFAULT_RECIPIENTS}',
-                recipientProviders: [developers(), requestor()]
+                body: "Pipeline Build Successful!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: SUCCESS ✅\n\nView Build: ${BUILD_URL}",
+                to: '${DEFAULT_RECIPIENTS}'
             )
             // Telegram notification on success
             sh '''
@@ -74,21 +65,10 @@ pipeline {
         failure {
             sh 'echo "Pipeline failed! ❌"'
             // Email notification on failure
-            emailext(
+            mail(
                 subject: "❌ BUILD FAILURE: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
-                body: """
-                    Pipeline Build Failed!
-                    
-                    Build Details:
-                    - Job: ${JOB_NAME}
-                    - Build #: ${BUILD_NUMBER}
-                    - Status: FAILURE ❌
-                    - Build URL: ${BUILD_URL}
-                    
-                    Please check the console output for more details.
-                """,
-                to: '${DEFAULT_RECIPIENTS}',
-                recipientProviders: [developers(), requestor()]
+                body: "Pipeline Build Failed!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: FAILURE ❌\n\nView Build: ${BUILD_URL}",
+                to: '${DEFAULT_RECIPIENTS}'
             )
             // Telegram notification on failure
             sh '''
