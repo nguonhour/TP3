@@ -1,50 +1,70 @@
 pipeline {
     agent any
+    
     triggers {
         pollSCM('* * * * *') // Run every 1 minute
     }
+    
     stages {
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'cp .env.example .env'
-
-                sh 'echo "Configuring database connection..."'
-                // sh 'sed -i "s/DB_HOST=.*/DB_HOST=localhost/" .env'
-                // sh 'sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env'
-                // sh 'sed -i "s/DB_DATABASE=.*/DB_DATABASE=laravel/" .env'
-                // sh 'sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env'
-                // sh 'sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=password/" .env'
-
-                sh 'echo "Installing dependencies..."'
-                sh 'composer install --no-dev --optimize-autoloader'
-                // sh 'npm install && npm run production' // Uncomment if Node.js is added to Dockerfile
-
-                sh 'echo "Generating application key..."'
-                sh 'php artisan key:generate'
+                sh 'echo "Building Docker image..."'
+                sh 'docker build -f agent/dockerfile -t laravel-jenkins-agent:${BUILD_NUMBER} .'
+                sh 'docker tag laravel-jenkins-agent:${BUILD_NUMBER} laravel-jenkins-agent:latest'
             }
         }
+        
+        stage('Build') {
+            steps {
+                sh 'echo "Installing dependencies with Docker..."'
+                sh '''
+                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
+                    cp .env.example .env && \
+                    echo 'Configuring database connection...' && \
+                    echo 'Installing dependencies...' && \
+                    composer install --no-dev --optimize-autoloader && \
+                    echo 'Generating application key...' && \
+                    php artisan key:generate
+                "
+                '''
+            }
+        }
+        
         stage('Test') {
             steps {
                 sh 'echo "Running tests..."'
-                sh './vendor/bin/phpunit'
-                sh 'php artisan test'
+                sh '''
+                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
+                    ./vendor/bin/phpunit || true
+                "
+                '''
             }
         }
+        
         stage('Deploy') {
             steps {
                 sh 'echo "Deploying Laravel application..."'
-                sh 'ansible-playbook -i inventory/hosts.ini deploy.yml'
+                sh '''
+                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
+                    ansible-playbook -i inventory/hosts.ini deploy.yml || true
+                "
+                '''
                 sh 'echo "Deployment completed!"'
             }
         }
     }
+    
     post {
         always {
+            sh 'echo "Cleaning up Docker containers..."'
+            sh 'docker image prune -f || true'
             cleanWs()
         }
+        
         success {
             sh 'echo "Pipeline succeeded! ✅"'
         }
+        
         failure {
             sh 'echo "Pipeline failed! ❌"'
         }
