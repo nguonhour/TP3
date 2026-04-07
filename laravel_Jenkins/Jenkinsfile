@@ -49,7 +49,7 @@ pipeline {
             mail(
                 subject: "✅ BUILD SUCCESS: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
                 body: "Pipeline Build Successful!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: SUCCESS ✅\n\nView Build: ${BUILD_URL}",
-                to: '${DEFAULT_RECIPIENTS}'
+                to: 'hengnguonhour@gmail.com'
             )
             // Telegram notification on success
             sh '''
@@ -68,7 +68,7 @@ pipeline {
             mail(
                 subject: "❌ BUILD FAILURE: Laravel-CI-CD-Pipeline #${BUILD_NUMBER}",
                 body: "Pipeline Build Failed!\n\nBuild #: ${BUILD_NUMBER}\nJob: ${JOB_NAME}\nStatus: FAILURE ❌\n\nView Build: ${BUILD_URL}",
-                to: '${DEFAULT_RECIPIENTS}'
+                to: 'hengnguonhour@gmail.com'
             )
             // Telegram notification on failure
             sh '''
