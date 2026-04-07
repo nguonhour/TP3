@@ -136,12 +136,23 @@ mkdir -p /var/www/html
 cd /var/www/html
 
 # Install Laravel project
-git clone https://github.com/nguonhour/TP3.git .
+git clone https://github.com/nguonhour/TP3.git /var/www/html/tp3
+
+# Navigate to the Laravel app
+cd laravel_Jenkins
+
+# Install dependencies
 composer install --no-dev --optimize-autoloader
-php artisan key:generate
 
 # Set permissions
-chown -R www-data:www-data /var/www/html
+chmod -R 775 storage bootstrap/cache
+chown -R www-data:www-data .
+
+# Copy environment file
+cp .env.example .env
+
+# Generate application key
+php artisan key:generate
 ```
 
 ### Step 3: Configure Ansiblefor Production Deployment
