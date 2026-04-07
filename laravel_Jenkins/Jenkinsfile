@@ -55,10 +55,7 @@ pipeline {
                     - Job: ${JOB_NAME}
                     - Build #: ${BUILD_NUMBER}
                     - Status: SUCCESS ✅
-                    - Duration: ${BUILD_DURATION}
-                    - Commit: ${GIT_COMMIT}
-                    
-                    View Build: ${BUILD_URL}
+                    - Build URL: ${BUILD_URL}
                 """,
                 to: '${DEFAULT_RECIPIENTS}',
                 recipientProviders: [developers(), requestor()]
@@ -86,13 +83,9 @@ pipeline {
                     - Job: ${JOB_NAME}
                     - Build #: ${BUILD_NUMBER}
                     - Status: FAILURE ❌
-                    - Duration: ${BUILD_DURATION}
-                    - Commit: ${GIT_COMMIT}
+                    - Build URL: ${BUILD_URL}
                     
-                    Console Output:
-                    ${BUILD_LOG_EXCERPT}
-                    
-                    View Build: ${BUILD_URL}
+                    Please check the console output for more details.
                 """,
                 to: '${DEFAULT_RECIPIENTS}',
                 recipientProviders: [developers(), requestor()]
