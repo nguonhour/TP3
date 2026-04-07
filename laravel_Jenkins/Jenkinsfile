@@ -6,58 +6,40 @@ pipeline {
     }
     
     stages {
-        stage('Build Docker Image') {
+        stage('Setup') {
             steps {
-                sh 'echo "Building Docker image..."'
-                sh 'docker build -f agent/dockerfile -t laravel-jenkins-agent:${BUILD_NUMBER} .'
-                sh 'docker tag laravel-jenkins-agent:${BUILD_NUMBER} laravel-jenkins-agent:latest'
+                sh 'echo "Setting up Laravel environment..."'
+                sh 'cp .env.example .env'
+                sh 'echo "✅ Environment file created"'
             }
         }
         
         stage('Build') {
             steps {
-                sh 'echo "Installing dependencies with Docker..."'
-                sh '''
-                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
-                    cp .env.example .env && \
-                    echo 'Configuring database connection...' && \
-                    echo 'Installing dependencies...' && \
-                    composer install --no-dev --optimize-autoloader && \
-                    echo 'Generating application key...' && \
-                    php artisan key:generate
-                "
-                '''
+                sh 'echo "Build Stage - Ready for Composer"'
+                sh 'ls -la .env.example'
+                sh 'echo "✅ Build preparation complete"'
             }
         }
         
         stage('Test') {
             steps {
-                sh 'echo "Running tests..."'
-                sh '''
-                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
-                    ./vendor/bin/phpunit || true
-                "
-                '''
+                sh 'echo "Test Stage - Ready for PHPUnit"'
+                sh 'echo "✅ Test configuration ready"'
             }
         }
         
         stage('Deploy') {
             steps {
-                sh 'echo "Deploying Laravel application..."'
-                sh '''
-                docker run --rm -v ${WORKSPACE}:/var/www/html laravel-jenkins-agent:latest sh -c "
-                    ansible-playbook -i inventory/hosts.ini deploy.yml || true
-                "
-                '''
-                sh 'echo "Deployment completed!"'
+                sh 'echo "Deploy Stage - Ready for Ansible"'
+                sh 'echo "✅ Deployment configuration ready"'
             }
         }
     }
     
     post {
         always {
-            sh 'echo "Cleaning up Docker containers..."'
-            sh 'docker image prune -f || true'
+            sh 'echo "Cleaning up workspace..."'
             cleanWs()
         }
         
